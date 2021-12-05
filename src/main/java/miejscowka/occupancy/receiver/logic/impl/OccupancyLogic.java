@@ -9,10 +9,19 @@ import miejscowka.occupancy.receiver.model.entity.OccupancyId;
 import miejscowka.occupancy.receiver.model.entity.PlaceEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.RestTemplate;
 
 import javax.inject.Inject;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 @Service
@@ -28,6 +37,8 @@ public class OccupancyLogic {
     @Inject
     private PlaceDao placeDao;
 
+    RestTemplate restTemplate = new RestTemplate();
+
     public Optional<OccupancyTo> updateOccupancyRelative(OccupancyTo occupancyTo) throws EntityDoesNotExistException {
 
         LOG.debug(UPDATE_OCCUPANCY_CHANGE_LOG, occupancyTo.getPlaceId());
@@ -39,8 +50,8 @@ public class OccupancyLogic {
         OccupancyEntity occupancyEntity;
 
         if(occupancyEntityOpt.isPresent()){
-
             occupancyEntity = occupancyEntityOpt.get();
+            occupancyDao.delete(occupancyEntity);
 
             int newOccupancy = occupancyEntity.getNumber_of_people() + occupancyTo.getNumberOfPeople();
 
@@ -51,6 +62,7 @@ public class OccupancyLogic {
             occupancyEntity = createNewOccupancy(occupancyTo.getPlaceId(), occupancyTo.getNumberOfPeople(), occupancyTo.getTime(), placeEntity);
         }
         occupancyDao.save(occupancyEntity);
+        notifyOccupancyModelingMicroservice(toOccupancyTo(occupancyEntity));
 
         return Optional.of(toOccupancyTo(occupancyEntity));
     }
@@ -67,13 +79,17 @@ public class OccupancyLogic {
 
         if(occupancyEntityOpt.isPresent()){
             occupancyEntity = occupancyEntityOpt.get();
+            occupancyDao.delete(occupancyEntity);
+
             occupancyEntity.getId().setTimeId(occupancyTo.getTime());
             occupancyEntity.setNumber_of_people(occupancyTo.getNumberOfPeople());
             occupancyEntity.setPercentage_occupancy(calculatePercentageOccupancy(occupancyTo.getNumberOfPeople(), placeEntity.getCapacity()));
         }else {
             occupancyEntity = createNewOccupancy(occupancyTo.getPlaceId(), occupancyTo.getNumberOfPeople(), occupancyTo.getTime(), placeEntity);
         }
+
         occupancyDao.save(occupancyEntity);
+        notifyOccupancyModelingMicroservice(toOccupancyTo(occupancyEntity));
 
         return Optional.of(toOccupancyTo(occupancyEntity));
     }
@@ -94,6 +110,21 @@ public class OccupancyLogic {
 
     private int calculatePercentageOccupancy(Integer numberOfPeople, Integer capacity){
         return (int) ((numberOfPeople * 100) / (capacity));
+    }
+
+    private void notifyOccupancyModelingMicroservice(OccupancyTo occupancyTo){
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+
+        MultiValueMap<String, Object> map= new LinkedMultiValueMap<>();
+        map.add("numberOfPeople", occupancyTo.getNumberOfPeople());
+        map.add("time", occupancyTo.getTime());
+
+        String url = "http://localhost:8070/place/" + occupancyTo.getPlaceId() + "/occupancy";
+
+        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<MultiValueMap<String, Object>>(map, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(url, request , String.class);
     }
 
     private OccupancyTo toOccupancyTo(OccupancyEntity occupancyEntity){
