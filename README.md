@@ -1,0 +1,1 @@
+# miejscowka-occupancy-receiver
