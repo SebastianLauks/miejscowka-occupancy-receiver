@@ -7,6 +7,7 @@ import miejscowka.occupancy.receiver.model.dao.PlaceDao;
 import miejscowka.occupancy.receiver.model.entity.OccupancyEntity;
 import miejscowka.occupancy.receiver.model.entity.OccupancyId;
 import miejscowka.occupancy.receiver.model.entity.PlaceEntity;
+import org.apache.juli.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -113,18 +114,22 @@ public class OccupancyLogic {
     }
 
     private void notifyOccupancyModelingMicroservice(OccupancyTo occupancyTo){
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
+        try{
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
 
-        MultiValueMap<String, Object> map= new LinkedMultiValueMap<>();
-        map.add("numberOfPeople", occupancyTo.getNumberOfPeople());
-        map.add("time", occupancyTo.getTime());
+            MultiValueMap<String, Object> map= new LinkedMultiValueMap<>();
+            map.add("numberOfPeople", occupancyTo.getNumberOfPeople());
+            map.add("time", occupancyTo.getTime());
 
-        String url = "http://localhost:8070/place/" + occupancyTo.getPlaceId() + "/occupancy";
+            String url = "http://localhost:8070/place/" + occupancyTo.getPlaceId() + "/occupancy";
 
-        HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<MultiValueMap<String, Object>>(map, headers);
+            HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<MultiValueMap<String, Object>>(map, headers);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(url, request , String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(url, request , String.class);
+        } catch (Exception e){
+            LOG.info("There was a problem with notifying occupancy modeling microservice");
+        }
     }
 
     private OccupancyTo toOccupancyTo(OccupancyEntity occupancyEntity){
