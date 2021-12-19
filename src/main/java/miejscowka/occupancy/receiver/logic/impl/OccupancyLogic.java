@@ -11,6 +11,7 @@ import org.apache.juli.logging.Log;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -31,6 +32,14 @@ public class OccupancyLogic {
     private static final String UPDATE_OCCUPANCY_LOG = "Update Occupancy with placeId {} in database.";
     private static final String UPDATE_OCCUPANCY_CHANGE_LOG = "Update Occupancy change with placeId {} in database.";
 
+    @Value("${app.service.domain}")
+    private String serviceDomain ;
+    @Value("${app.service.port}")
+    private int servicePort;
+    @Value("${app.service.api.path.prefix}")
+    private String serviceApiPathPrefix;
+    @Value("${app.service.api.path}")
+    private String serviceApiPath;
 
     @Inject
     private OccupancyDao occupancyDao;
@@ -122,7 +131,7 @@ public class OccupancyLogic {
             map.add("numberOfPeople", occupancyTo.getNumberOfPeople());
             map.add("time", occupancyTo.getTime());
 
-            String url = "http://localhost:8070/place/" + occupancyTo.getPlaceId() + "/occupancy";
+            String url = "http://" + serviceDomain + ":" + servicePort + "/" + serviceApiPathPrefix + "/" + occupancyTo.getPlaceId() + "/" + serviceApiPath;
 
             HttpEntity<MultiValueMap<String, Object>> request = new HttpEntity<MultiValueMap<String, Object>>(map, headers);
 
