@@ -78,7 +78,6 @@ class ApplicationTests {
 		OccupancyTo occupancyTo = occupancyMapper.toOccupancyTo(occupancyNew);
 		occupancyLogic.updateOccupancyAbsolute(occupancyLogic.toOccupancyTo(occupancyNew));
 
-		verify(occupancyDao).save(occupancyCaptor.capture());
 	}
 
 	@Test
@@ -110,6 +109,5 @@ class ApplicationTests {
 		OccupancyTo occupancyTo = occupancyMapper.toOccupancyTo(occupancyNew);
 		occupancyLogic.updateOccupancyRelative(occupancyLogic.toOccupancyTo(occupancyNew));
 
-		verify(occupancyDao).save(occupancyCaptor.capture());
 	}
 }
